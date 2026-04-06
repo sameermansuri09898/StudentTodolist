@@ -1,5 +1,6 @@
+
 from rest_framework import serializers
-from .models import Baseuser
+from .models import Baseuser,Todolist
 
 class UserSerializer(serializers.ModelSerializer):
     confirm_password=serializers.CharField(write_only=True) 
@@ -42,3 +43,22 @@ class UserSerializer(serializers.ModelSerializer):
           user.save()
 
           return user
+
+
+class TodolistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Todolist
+        fields = ['id','title','description','created_at','updated_at','user']
+        extra_kwargs = {
+            'user': {'read_only': True}
+        }    
+    def create(self, validated_data):
+        return Todolist.objects.create(**validated_data)    
+
+class LoginUser(serializers.Serializer):
+    username=serializers.CharField()
+    password=serializers.CharField()
+
+    class Meta:
+        model=Baseuser
+        fields=['username','password']

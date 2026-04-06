@@ -1,13 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Baseuser
-from .serializerreg import UserSerializer
+from .models import Baseuser,Todolist
+from .serializerreg import UserSerializer,LoginUser
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework import generics
 from .Todoserializer import TodolistSerializer
 from rest_framework import viewsets
+from django.contrib.auth import authenticate
 
 class UserRegistrationView(APIView):
     permission_classes=[AllowAny]
@@ -50,3 +51,16 @@ class TodolistCreateView(viewsets.ViewSet):
         queryset=Todolist.objects.get(pk=pk)
         queryset.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)  
+
+
+class LoginView(APIView):
+    permission_classes=[AllowAny]
+    def post(self,request):
+      serilizer=LoginUser(data=request.data)
+      if serilizer.is_valid():
+        user=authenticate(request,username=serilizer.validate_data["username"],password=serilizer.validate_data["password"] )
+        if user is not None:
+          token,created=Token.objects.get_or_create(user=user)
+          return Response({"token":token.key},status=status.HTTP_200_OK)
+      return Response(serilizer.errors,status=status.HTTP_400_BAD_REQUEST)      
+           
