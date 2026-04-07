@@ -10,6 +10,7 @@ from .Todoserializer import TodolistSerializer
 from rest_framework import viewsets
 from django.contrib.auth import authenticate
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.authentication import TokenAuthentication
 
 class UserRegistrationView(APIView):
     permission_classes = [AllowAny]
@@ -25,56 +26,66 @@ class UserRegistrationView(APIView):
         print("ERROR 👉", serializer.errors)   # 👈 ADD THIS
         return Response(serializer.errors, status=400)
 
-class TodolistCreateView(viewsets.ViewSet):  
-    permission_classes=[IsAuthenticated] 
+class TodolistCreateView(viewsets.ViewSet):
 
-    def list(self,request):
-        queryset=Todolist.objects.filter(user=request.user)
-        serializer=TodolistSerializer(queryset,many=True)
+    authentication_classes = [TokenAuthentication]   # ✅ ADD THIS
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        queryset = Todolist.objects.filter(user=request.user)
+        serializer = TodolistSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    def create(self,request):
-        serializer=TodolistSerializer(data=request.data)
+    def create(self, request):
+        serializer = TodolistSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save() 
-            print(serializer.data)  
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            serializer.save(user=request.user)   # ✅ FIX THIS ALSO
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def retrieve(self,request,pk=None):
-        queryset=Todolist.objects.get(pk=pk)
-        serializer=TodolistSerializer(queryset)
-        return Response(serializer.data)
-
-    def update(self,request,pk=None):
-        queryset=Todolist.objects.get(pk=pk)
-        serializer=TodolistSerializer(queryset,data=request.data)
+    def partial_update(self, request, pk=None):
+        queryset = Todolist.objects.get(user=request.user, pk=pk)
+        serializer = TodolistSerializer(queryset, data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        print(serializer.errors)    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self,request,pk=None):
-        queryset=Todolist.objects.get(pk=pk)
+    def destroy(self, request, pk=None):
+        queryset = Todolist.objects.get(user=request.user,pk=pk)
         queryset.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)  
-
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class LoginView(APIView):
-    permission_classes=[AllowAny]
-    def post(self,request):
-      serializer=LoginUser(data=request.data)
-      if serializer.is_valid():
-       user = authenticate(
-        request,
-        username=serializer.validated_data["username"],
-        password=serializer.validated_data["password"]
-    )
-       if user is not None:
-         token, created = Token.objects.get_or_create(user=user)
-         return Response({"token": token.key}, status=status.HTTP_200_OK)
-    
-       return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
 
-      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)     
+    def post(self, request):
+        serializer = LoginUser(data=request.data)
+
+        if serializer.is_valid():
+            user = authenticate(
+                request,
+                username=serializer.validated_data["username"],
+                password=serializer.validated_data["password"]
+            )
+
+            if user is not None:
+                token, _ = Token.objects.get_or_create(user=user)
+                return Response({"token": token.key}, status=200)
+
+            return Response({"error": "Invalid credentials"}, status=401)
+
+        return Response(serializer.errors, status=400)
            
+
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Delete the user's token
+        request.user.auth_token.delete()
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)           
