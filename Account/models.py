@@ -4,7 +4,7 @@ from django.conf import settings
 
 
 class Baseuser(AbstractUser):
-    Address=models.CharField(max_length=100)
+    address=models.CharField(max_length=100)
     phone=models.CharField(max_length=100)
     image=models.ImageField(upload_to="profile_pics",blank=True,null=True)  
     

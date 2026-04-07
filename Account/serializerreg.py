@@ -6,7 +6,7 @@ class UserSerializer(serializers.ModelSerializer):
     confirm_password=serializers.CharField(write_only=True) 
     class Meta:
         model = Baseuser
-        fields = ['username','email','password','confirm_password','Address','phone','image']
+        fields = ['username','email','password','confirm_password','address','phone','image']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -15,8 +15,10 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Passwords do not match")
         return attrs    
 
-    def get_image(self,obj):
-        return obj.image.url if obj.image else None   
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, obj):
+     return obj.image.url if obj.image else None   
 
     def validate_email(self,value):
         if Baseuser.objects.filter(email=value).exists():
@@ -34,15 +36,20 @@ class UserSerializer(serializers.ModelSerializer):
         return value  
 
     def create(self, validated_data):
-          validated_data.pop('confirm_password')  
+         validated_data.pop('confirm_password', None)
+         password = validated_data.pop('password')
 
-          password = validated_data.pop('password')
+         user = Baseuser(
+            username=validated_data.get('username'),
+            email=validated_data.get('email'),
+            phone=validated_data.get('phone'),
+            address=validated_data.get('address'),
+            image=validated_data.get('image'),  
+         )
+         user.set_password(password)   # ✅ correct hashing
+         user.save()
 
-          user = Baseuser.objects.create_user(**validated_data)
-          user.set_password(password) 
-          user.save()
-
-          return user
+         return user
 
 
 class TodolistSerializer(serializers.ModelSerializer):
