@@ -58,7 +58,7 @@ class LoginView(APIView):
     def post(self,request):
       serilizer=LoginUser(data=request.data)
       if serilizer.is_valid():
-        user=authenticate(request,username=serilizer.validate_data["username"],password=serilizer.validate_data["password"] )
+        user=authenticate(request,username=serilizer.validated_data["username"],password=serilizer.validated_data["password"] )
         if user is not None:
           token,created=Token.objects.get_or_create(user=user)
           return Response({"token":token.key},status=status.HTTP_200_OK)

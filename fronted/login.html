@@ -114,7 +114,7 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
     message.innerHTML = "Logging in...";
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/token/", {  // 🔁 change if needed
+        const response = await fetch("http://127.0.0.1:8000/Account/login/", {  // 🔁 change if needed
             method: "POST",
             body: formData
         });
